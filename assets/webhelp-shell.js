@@ -55,7 +55,6 @@
   var pendingHighlight = null;
   var nextHistoryMode = "replace";
   var preferredNavigationNode = -1;
-  var lastTrackedPage = "";
   var bookCatalog = Array.isArray(window.WebHelpBookCatalog) ? window.WebHelpBookCatalog : [];
   var selectedBookKey = "";
 
@@ -153,15 +152,6 @@
     } catch (error) {
       return;
     }
-  }
-
-  function trackPageView(relativePath) {
-    if (!relativePath || !/^https?:$/.test(window.location.protocol)) return;
-    var page = window.location.pathname + window.location.search;
-    if (!page || page === lastTrackedPage) return;
-    lastTrackedPage = page;
-    window._hmt = window._hmt || [];
-    window._hmt.push(["_trackPageview", page]);
   }
 
   function topicUrl(value) {
@@ -867,7 +857,6 @@
     enhanceContentDocument();
     var relativePath = currentTopicRelativePath();
     updatePageUrl(relativePath, nextHistoryMode);
-    trackPageView(relativePath);
     nextHistoryMode = "push";
     if (currentView === "contents") {
       try { syncNavigationSelection(navFrame.contentDocument); } catch (error) {}
