@@ -147,6 +147,21 @@
     </button>
 
     <main class="content-area" id="contentArea">
+      <aside class="unpartnered-toast" id="unpartneredToast" role="status" aria-live="polite" hidden>
+        <div class="unpartnered-toast-header">
+          <strong class="unpartnered-toast-title">未收编拓展提示</strong>
+          <span class="unpartnered-toast-timer" id="unpartneredToastTimer" aria-hidden="true">4s</span>
+          <button class="unpartnered-toast-close" id="unpartneredToastClose" type="button" aria-label="关闭提示" title="关闭提示">×</button>
+        </div>
+        <p class="unpartnered-toast-body">本站并非不全书网页版维护者“星尘”部署的网站（<a href="https://5echm.kagangtuya.top" target="_blank" rel="noopener noreferrer">前往原站点 ↗</a>），里面包括未被 D&amp;D Beyond 收入的拓展。请与你的 DM 商量是否允许使用这些拓展，解释权归属你的 DM。</p>
+        <div class="unpartnered-toast-actions">
+          <a class="unpartnered-toast-more" id="unpartneredToastMore" href="topics/第三方/关于未收编拓展.htm" target="content">了解详情</a>
+          <button class="unpartnered-toast-optout" id="unpartneredToastOptOut" type="button">不再提示</button>
+        </div>
+        <div class="unpartnered-toast-progress" aria-hidden="true">
+          <div class="unpartnered-toast-bar" id="unpartneredToastBar"></div>
+        </div>
+      </aside>
       <iframe
         id="content"
         name="content"

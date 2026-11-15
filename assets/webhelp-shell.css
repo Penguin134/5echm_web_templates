@@ -710,6 +710,7 @@ body.sidebar-resizing .sidebar-resizer::after {
 }
 
 .content-area {
+  position: relative;
   grid-column: 3;
   flex: 1 1 auto;
   min-width: 0;
@@ -717,6 +718,166 @@ body.sidebar-resizing .sidebar-resizer::after {
   overflow: hidden;
   background: #f4f5f7;
   background: var(--bg);
+}
+
+.unpartnered-toast {
+  --toast-progress: 1;
+  position: absolute;
+  top: 14px;
+  right: 18px;
+  z-index: 35;
+  width: min(380px, calc(100% - 28px));
+  max-width: min(380px, calc(100vw - 28px));
+  overflow: hidden;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid color-mix(in srgb, var(--accent) 34%, var(--border));
+  border-left: 4px solid var(--accent);
+  border-radius: 8px;
+  box-shadow: var(--shadow-menu);
+  opacity: 1;
+  transform: translateY(0);
+  transition: opacity 180ms ease, transform 180ms ease;
+}
+
+.unpartnered-toast[hidden] {
+  display: none !important;
+}
+
+.unpartnered-toast.is-leaving {
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+.unpartnered-toast-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 6px 13px;
+}
+
+.unpartnered-toast-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--accent);
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.unpartnered-toast-timer {
+  flex: 0 0 auto;
+  padding: 1px 7px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.5;
+}
+
+.unpartnered-toast.is-paused .unpartnered-toast-timer {
+  color: var(--text-muted);
+  background: var(--surface-muted);
+}
+
+.unpartnered-toast-close {
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  color: var(--text-muted);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  font-size: 17px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.unpartnered-toast-close:hover {
+  color: var(--text);
+  background: var(--surface-hover);
+}
+
+.unpartnered-toast-body {
+  margin: 0;
+  padding: 0 13px 10px;
+  color: var(--text);
+  font-size: 12.5px;
+  line-height: 1.62;
+  overflow-wrap: anywhere;
+}
+
+.unpartnered-toast-body a {
+  color: var(--accent);
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.unpartnered-toast-body a:hover {
+  color: var(--accent-hover);
+}
+
+.unpartnered-toast-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 7px 12px 9px 13px;
+  background: var(--surface-muted);
+  border-top: 1px solid var(--border);
+}
+
+.unpartnered-toast-more {
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.unpartnered-toast-more:hover {
+  color: var(--accent-hover);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.unpartnered-toast-optout {
+  padding: 3px 9px;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  font-size: 12px;
+  line-height: 1.4;
+  cursor: pointer;
+}
+
+.unpartnered-toast-optout:hover {
+  background: var(--surface-hover);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.unpartnered-toast-progress {
+  width: 100%;
+  height: 3px;
+  background: var(--surface-muted);
+  overflow: hidden;
+}
+
+.unpartnered-toast-bar {
+  width: 100%;
+  height: 100%;
+  background: var(--accent);
+  transform-origin: left center;
+  transform: scaleX(var(--toast-progress, 1));
+  will-change: transform;
 }
 
 .sidebar-restore {
@@ -987,6 +1148,12 @@ body.sidebar-resizing iframe {
     right: max(8px, env(safe-area-inset-right));
     width: min(280px, calc(100vw - 16px));
   }
+
+  .unpartnered-toast {
+    top: 10px;
+    right: 14px;
+    width: min(380px, calc(100vw - 28px));
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -1012,7 +1179,8 @@ body.sidebar-resizing iframe {
   .sidebar-resizer,
   .sidebar-restore,
   .drawer-backdrop,
-  .more-menu {
+  .more-menu,
+  .unpartnered-toast {
     display: none !important;
   }
 

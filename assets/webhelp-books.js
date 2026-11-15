@@ -49,6 +49,8 @@
     { key: "vgtm", title: "瓦罗的怪物指南", abbreviation: "VGtM", publishedAt: "2016-11-15", section: "legacy" },
     { key: "mtof", title: "魔邓肯的众敌卷册", abbreviation: "MToF", publishedAt: "2018-05-29", section: "legacy" },
 
+    { key: "bzad", title: "Battlezoo先祖：巨龙", abbreviation: "BZAD", publishedAt: "2022-09-01", section: "unpartnered", tocLabels: ["Battlezoo先祖：巨龙", "Battlezoo先祖：巨龙 new!"], pathPrefixes: ["第三方/Battlezoo先祖：巨龙/"] },
+
     { key: "drakkenheim", title: "德拉肯海姆", abbreviation: "Dk", section: "partner" },
     { key: "sss", title: "探寻走私者之秘", abbreviation: "SSS", section: "partner", ancestorTitles: ["德拉肯海姆"] },
     { key: "mod", title: "德拉肯海姆的怪物", abbreviation: "MoD", section: "partner", ancestorTitles: ["德拉肯海姆"] },
@@ -89,4 +91,20 @@
     { key: "mtce", title: "穆克的塔莎所授万事指南", abbreviation: "MTCE", section: "other", ancestorTitles: ["穆克系列"] },
     { key: "hf", title: "英雄盛宴", abbreviation: "HF", section: "other" }
   ];
+
+  var unpartneredPrefixes = [];
+  window.WebHelpBookCatalog.forEach(function (book) {
+    if (!book || book.section !== "unpartnered" || !Array.isArray(book.pathPrefixes)) return;
+    book.pathPrefixes.forEach(function (prefix) {
+      if (prefix && unpartneredPrefixes.indexOf(prefix) === -1) unpartneredPrefixes.push(prefix);
+    });
+  });
+
+  window.WebHelpUnpartneredConfig = {
+    aboutTopicPath: "第三方/关于未收编拓展.htm",
+    exactPaths: ["第三方/关于未收编拓展.htm"],
+    pathPrefixes: unpartneredPrefixes.length ? unpartneredPrefixes : ["第三方/Battlezoo先祖：巨龙/"],
+    startDividerTitle: "——未收编拓展——",
+    endDividerTitle: "——合作内容——"
+  };
 })();

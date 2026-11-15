@@ -296,6 +296,86 @@ html.webhelp-topic-document[data-webhelp-theme="dark"] .center {
   border-color: var(--topic-border) !important;
 }
 
+/* Dark theme adaptation for legacy and 2024 monster stat blocks (zero change in light mode). */
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block {
+  color: var(--topic-text);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block:not([data-statblock-view="responsive"]) {
+  background-color: var(--topic-surface);
+  border-color: var(--topic-border);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block p,
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block li {
+  color: var(--topic-text);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block .sub-line,
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block font[color="#808080" i],
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block font[color="gray" i] {
+  color: var(--topic-text-muted) !important;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block h5,
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block h6 {
+  color: var(--topic-accent) !important;
+  background-color: transparent !important;
+  border-bottom-color: var(--topic-accent);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block h5 font,
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block h6 font {
+  color: inherit !important;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block font[color="#800000" i],
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block font[color="maroon" i] {
+  color: var(--topic-accent) !important;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block hr {
+  border-color: var(--topic-border);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table {
+  color: var(--topic-text);
+  background-color: transparent;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table strong,
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table b {
+  color: var(--topic-accent);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table th {
+  color: var(--topic-text);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table.stat-abilities th {
+  color: var(--topic-text-muted);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table.stat-abilities td {
+  color: var(--topic-text);
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table.stat-abilities td.c1 {
+  background-color: var(--statblock-c1, #262022) !important;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table.stat-abilities td.c2 {
+  background-color: var(--statblock-c2, #2f2627) !important;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table.stat-abilities td.c3 {
+  background-color: var(--statblock-c3, #1f2524) !important;
+}
+
+html.webhelp-topic-document[data-webhelp-theme="dark"] div.stat-block table.stat-abilities td.c4 {
+  background-color: var(--statblock-c4, #26262a) !important;
+}
+
 body.webhelp-home {
   padding-top: 28px;
 }
@@ -507,12 +587,14 @@ body.webhelp-home {
 .webhelp-bookshelf-group-official { --bookshelf-group-accent: #765427; }
 .webhelp-bookshelf-group-setting { --bookshelf-group-accent: #28564a; }
 .webhelp-bookshelf-group-legacy { --bookshelf-group-accent: #5b5a57; }
+.webhelp-bookshelf-group-unpartnered { --bookshelf-group-accent: #244c78; }
 .webhelp-bookshelf-group-partner { --bookshelf-group-accent: #51406f; }
 .webhelp-bookshelf-group-other { --bookshelf-group-accent: #76512e; }
 
 :root[data-webhelp-theme="dark"] .webhelp-bookshelf-group-official { --bookshelf-group-accent: #d0a55d; }
 :root[data-webhelp-theme="dark"] .webhelp-bookshelf-group-setting { --bookshelf-group-accent: #70ad99; }
 :root[data-webhelp-theme="dark"] .webhelp-bookshelf-group-legacy { --bookshelf-group-accent: #aaa59c; }
+:root[data-webhelp-theme="dark"] .webhelp-bookshelf-group-unpartnered { --bookshelf-group-accent: #79a8dc; }
 :root[data-webhelp-theme="dark"] .webhelp-bookshelf-group-partner { --bookshelf-group-accent: #a997cd; }
 :root[data-webhelp-theme="dark"] .webhelp-bookshelf-group-other { --bookshelf-group-accent: #c89b6b; }
 
@@ -578,6 +660,7 @@ body.webhelp-home {
   box-shadow: inset 0 12px 18px color-mix(in srgb, var(--bookshelf-group-accent) 4%, transparent);
 }
 
+.webhelp-bookshelf-group-unpartnered .webhelp-bookcase,
 .webhelp-bookshelf-group-other .webhelp-bookcase {
   display: flex;
   align-items: flex-end;
@@ -585,6 +668,11 @@ body.webhelp-home {
   gap: 6px;
 }
 
+.webhelp-bookshelf-group-unpartnered .webhelp-bookcase {
+  flex-wrap: wrap;
+}
+
+.webhelp-bookshelf-group-unpartnered .webhelp-book,
 .webhelp-bookshelf-group-other .webhelp-book {
   flex: 0 0 auto;
   justify-self: auto;
@@ -852,6 +940,40 @@ body.webhelp-home {
   content: "!";
 }
 
+.webhelp-callout.webhelp-site-disclaimer {
+  margin: 14px 0 22px !important;
+  padding: 14px 16px 14px 44px;
+  color: var(--topic-text);
+  background: #fff6eb;
+  background: color-mix(in srgb, var(--topic-accent) 6%, var(--topic-warning-bg));
+  border: 1px solid color-mix(in srgb, var(--topic-accent) 32%, var(--topic-border));
+  border-left: 4px solid var(--topic-accent);
+  line-height: 1.68;
+  overflow-wrap: anywhere;
+}
+
+:root[data-webhelp-theme="dark"] .webhelp-callout.webhelp-site-disclaimer {
+  background: #281d1f;
+  background: color-mix(in srgb, var(--topic-accent) 12%, var(--topic-surface-muted));
+  border-color: color-mix(in srgb, var(--topic-accent) 44%, var(--topic-border));
+  border-left-color: var(--topic-accent);
+}
+
+.webhelp-callout.webhelp-site-disclaimer::before {
+  top: 15px;
+  left: 14px;
+  color: var(--topic-accent);
+  content: "!";
+}
+
+.webhelp-callout.webhelp-site-disclaimer strong {
+  color: var(--topic-accent);
+}
+
+.webhelp-callout.webhelp-site-disclaimer a {
+  font-weight: 600;
+}
+
 @media (max-width: 767px) {
   html.webhelp-topic-document body {
     padding: 24px 16px 48px;
@@ -904,6 +1026,7 @@ body.webhelp-home {
     padding-inline: 7px;
   }
 
+  .webhelp-bookshelf-group-unpartnered .webhelp-bookcase,
   .webhelp-bookshelf-group-other .webhelp-bookcase {
     gap: 4px;
   }
@@ -941,6 +1064,10 @@ body.webhelp-home {
     --topic-border: #b8b8b8;
     --topic-accent: #661111;
     --topic-link: #174e88;
+    --statblock-c1: #e9e3d6;
+    --statblock-c2: #d8d0c9;
+    --statblock-c3: #d2d6ce;
+    --statblock-c4: #cbc6c6;
     color-scheme: light;
   }
 

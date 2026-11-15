@@ -56,7 +56,25 @@
   var nextHistoryMode = "replace";
   var preferredNavigationNode = -1;
   var bookCatalog = Array.isArray(window.WebHelpBookCatalog) ? window.WebHelpBookCatalog : [];
+  var unpartneredConfig = window.WebHelpUnpartneredConfig || {};
   var selectedBookKey = "";
+  var unpartneredToast = document.getElementById("unpartneredToast");
+  var unpartneredToastTimer = document.getElementById("unpartneredToastTimer");
+  var unpartneredToastClose = document.getElementById("unpartneredToastClose");
+  var unpartneredToastMore = document.getElementById("unpartneredToastMore");
+  var unpartneredToastOptOut = document.getElementById("unpartneredToastOptOut");
+  var unpartneredToastBar = document.getElementById("unpartneredToastBar");
+  var UNPARTNERED_TOAST_DURATION = 4000;
+  var wasInUnpartnered = false;
+  var toastVisible = false;
+  var toastHovered = false;
+  var toastFocused = false;
+  var toastRemainingMs = UNPARTNERED_TOAST_DURATION;
+  var toastLastTick = 0;
+  var toastRafId = 0;
+  var toastLeaveTimer = 0;
+  var cachedNavUnpartneredDoc = null;
+  var cachedNavUnpartneredPaths = null;
 
   function readStorage(key) {
     try {
@@ -490,6 +508,243 @@
     }
     renderHomeBookshelf();
     if (selectedBookKey && currentView === "contents") focusSelectedBook();
+    if (currentView === "contents" && !wasInUnpartnered) {
+      var currentRel = currentTopicRelativePath();
+      if (currentRel && isUnpartneredTopic(currentRel)) {
+        wasInUnpartnered = true;
+        maybeShowUnpartneredToast();
+      }
+    }
+  }
+
+  function unpartneredAboutPath() {
+    return unpartneredConfig.aboutTopicPath || "第三方/关于未收编拓展.htm";
+  }
+
+  function normalizeDecodedTopicPath(relPath) {
+    if (!relPath) return "";
+    var raw = String(relPath).trim().replace(/\\/g, "/").replace(/^\.\//, "").replace(/^topics\//i, "").split(/[?#]/)[0];
+    var decoded = raw;
+    try {
+      decoded = decodeURIComponent(raw);
+    } catch (error) {
+      decoded = raw;
+    }
+    return decoded.replace(/\/+/g, "/").replace(/^\//, "");
+  }
+
+  function navUnpartneredPaths() {
+    if (currentView !== "contents") return cachedNavUnpartneredPaths;
+    var doc;
+    try { doc = navFrame.contentDocument; } catch (error) { return cachedNavUnpartneredPaths; }
+    if (!doc || !doc.body) return cachedNavUnpartneredPaths;
+    if (cachedNavUnpartneredDoc === doc && cachedNavUnpartneredPaths) return cachedNavUnpartneredPaths;
+
+    var rootNodes = Array.prototype.filter.call(doc.querySelectorAll(".nav-node"), function (node) {
+      return !node.parentElement || !node.parentElement.closest || !node.parentElement.closest(".nav-node");
+    });
+    if (!rootNodes.length) return cachedNavUnpartneredPaths;
+
+    var startTitle = unpartneredConfig.startDividerTitle || "——未收编拓展——";
+    var endTitle = unpartneredConfig.endDividerTitle || "——合作内容——";
+    var map = Object.create(null);
+    var inSection = false;
+
+    rootNodes.forEach(function (node) {
+      var labelEl = null;
+      Array.prototype.some.call(node.children, function (child) {
+        if (child.tagName !== "A") return false;
+        labelEl = child.querySelector('[id^="l"]');
+        return Boolean(labelEl);
+      });
+      var labelText = labelEl ? (labelEl.textContent || "").replace(/\s+/g, "").trim() : "";
+      if (!inSection) {
+        if (labelText === startTitle || (labelText.indexOf("未收编拓展") !== -1 && /^—/.test(labelText))) {
+          inSection = true;
+        } else {
+          return;
+        }
+      } else if (labelText === endTitle || (/^——/.test(labelText) && labelText.indexOf("未收编拓展") === -1)) {
+        inSection = false;
+        return;
+      }
+
+      node.querySelectorAll('a[target="content"]').forEach(function (link) {
+        try {
+          var resolved = new URL(link.href, window.location.href).pathname;
+          var topicRel = resolved.replace(/^.*\/topics\//i, "");
+          var norm = normalizeDecodedTopicPath(topicRel).toLowerCase();
+          if (norm) map[norm] = true;
+        } catch (error) {}
+      });
+    });
+
+    cachedNavUnpartneredDoc = doc;
+    cachedNavUnpartneredPaths = map;
+    return map;
+  }
+
+  function isUnpartneredTopic(relPath) {
+    var normalized = normalizeDecodedTopicPath(relPath).toLowerCase();
+    if (!normalized) return false;
+
+    var exactPaths = Array.isArray(unpartneredConfig.exactPaths) ? unpartneredConfig.exactPaths : [unpartneredAboutPath()];
+    for (var i = 0; i < exactPaths.length; i += 1) {
+      var exactNorm = normalizeDecodedTopicPath(exactPaths[i]).toLowerCase();
+      if (exactNorm && normalized === exactNorm) return true;
+    }
+
+    var prefixes = Array.isArray(unpartneredConfig.pathPrefixes) ? unpartneredConfig.pathPrefixes.slice() : [];
+    bookCatalog.forEach(function (book) {
+      if (!book || book.section !== "unpartnered" || !Array.isArray(book.pathPrefixes)) return;
+      book.pathPrefixes.forEach(function (prefix) {
+        if (prefix && prefixes.indexOf(prefix) === -1) prefixes.push(prefix);
+      });
+    });
+    for (var j = 0; j < prefixes.length; j += 1) {
+      var prefixNorm = normalizeDecodedTopicPath(prefixes[j]).toLowerCase();
+      if (!prefixNorm) continue;
+      if (prefixNorm.charAt(prefixNorm.length - 1) !== "/") prefixNorm += "/";
+      if (normalized.indexOf(prefixNorm) === 0) return true;
+    }
+
+    var fallbackMap = navUnpartneredPaths();
+    return Boolean(fallbackMap && fallbackMap[normalized]);
+  }
+
+  function nowMs() {
+    return window.performance && typeof window.performance.now === "function" ? window.performance.now() : Date.now();
+  }
+
+  function isToastPaused() {
+    return toastHovered || toastFocused;
+  }
+
+  function cancelToastTimers() {
+    if (toastRafId) {
+      window.cancelAnimationFrame(toastRafId);
+      toastRafId = 0;
+    }
+    if (toastLeaveTimer) {
+      window.clearTimeout(toastLeaveTimer);
+      toastLeaveTimer = 0;
+    }
+  }
+
+  function syncToastTimerUi() {
+    if (!unpartneredToast) return;
+    var ratio = clamp(toastRemainingMs / UNPARTNERED_TOAST_DURATION, 0, 1);
+    if (unpartneredToastBar) {
+      unpartneredToastBar.style.setProperty("--toast-progress", ratio.toFixed(4));
+    }
+    var paused = isToastPaused();
+    unpartneredToast.classList.toggle("is-paused", paused);
+    if (unpartneredToastTimer) {
+      unpartneredToastTimer.textContent = paused ? "已暂停" : Math.max(1, Math.ceil(toastRemainingMs / 1000)) + "s";
+    }
+  }
+
+  function tickToastCountdown(timestamp) {
+    toastRafId = 0;
+    if (!toastVisible) return;
+    if (isToastPaused()) {
+      toastLastTick = 0;
+      syncToastTimerUi();
+      return;
+    }
+    var current = typeof timestamp === "number" ? timestamp : nowMs();
+    if (toastLastTick > 0) {
+      toastRemainingMs = Math.max(0, toastRemainingMs - Math.max(0, current - toastLastTick));
+    }
+    toastLastTick = current;
+    syncToastTimerUi();
+    if (toastRemainingMs <= 0) {
+      toastLastTick = 0;
+      hideUnpartneredToast(false);
+      return;
+    }
+    toastRafId = window.requestAnimationFrame(tickToastCountdown);
+  }
+
+  function pauseToastCountdown() {
+    if (!toastVisible) return;
+    if (toastRafId) {
+      window.cancelAnimationFrame(toastRafId);
+      toastRafId = 0;
+    }
+    if (toastLastTick > 0) {
+      toastRemainingMs = Math.max(0, toastRemainingMs - Math.max(0, nowMs() - toastLastTick));
+      toastLastTick = 0;
+    }
+    syncToastTimerUi();
+  }
+
+  function resumeToastCountdownIfIdle() {
+    if (!toastVisible) return;
+    if (isToastPaused()) {
+      syncToastTimerUi();
+      return;
+    }
+    if (toastRemainingMs <= 0) {
+      hideUnpartneredToast(false);
+      return;
+    }
+    syncToastTimerUi();
+    if (!toastRafId) {
+      toastLastTick = nowMs();
+      toastRafId = window.requestAnimationFrame(tickToastCountdown);
+    }
+  }
+
+  function hideUnpartneredToast(immediate) {
+    if (!unpartneredToast) return;
+    cancelToastTimers();
+    toastVisible = false;
+    toastHovered = false;
+    toastFocused = false;
+    toastLastTick = 0;
+    unpartneredToast.classList.remove("is-paused");
+    var reduceMotion = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (immediate || unpartneredToast.hidden || reduceMotion) {
+      unpartneredToast.classList.remove("is-leaving");
+      unpartneredToast.hidden = true;
+      return;
+    }
+    unpartneredToast.classList.add("is-leaving");
+    toastLeaveTimer = window.setTimeout(function () {
+      toastLeaveTimer = 0;
+      unpartneredToast.classList.remove("is-leaving");
+      unpartneredToast.hidden = true;
+    }, 190);
+  }
+
+  function maybeShowUnpartneredToast() {
+    if (!unpartneredToast || readStorage("hideUnpartneredToast") === "1") return;
+    cancelToastTimers();
+    toastRemainingMs = UNPARTNERED_TOAST_DURATION;
+    toastVisible = true;
+    toastHovered = Boolean(unpartneredToast.matches && unpartneredToast.matches(":hover"));
+    toastFocused = Boolean(document.activeElement && unpartneredToast.contains(document.activeElement));
+    unpartneredToast.classList.remove("is-leaving");
+    unpartneredToast.hidden = false;
+    syncToastTimerUi();
+    if (!isToastPaused()) {
+      toastLastTick = nowMs();
+      toastRafId = window.requestAnimationFrame(tickToastCountdown);
+    }
+  }
+
+  function evaluateUnpartneredCategory(relativePath) {
+    var inUnpartnered = isUnpartneredTopic(relativePath);
+    if (inUnpartnered) {
+      if (!wasInUnpartnered) {
+        wasInUnpartnered = true;
+        maybeShowUnpartneredToast();
+      }
+    } else {
+      wasInUnpartnered = false;
+      hideUnpartneredToast(true);
+    }
   }
 
   function quickActionIcon(kind) {
@@ -670,7 +925,8 @@
       { key: "legacy", title: "旧版资源", description: "2014 版与已停止更新内容", compact: true },
       { key: "official", title: "规则扩展", description: "官方规则补充", compact: true },
       { key: "setting", title: "战役设定", description: "官方世界与设定集" },
-      { key: "partner", title: "合作内容", description: "第三方与合作出版物" },
+      { key: "unpartnered", title: "未收编拓展", description: "未被 D&D Beyond 收编的第三方拓展" },
+      { key: "partner", title: "合作内容", description: "D&D Beyond 收编合作出版物" },
       { key: "other", title: "其他出版物", description: "站内收录的其他实体出版资源" }
     ];
 
@@ -766,6 +1022,48 @@
     else announce("“" + book.title + "”当前尚无可展开的独立目录");
   }
 
+  function ensureHomeDisclaimer(doc, homeTitle) {
+    if (!doc || !doc.body || doc.getElementById("webhelpSiteDisclaimer") || doc.querySelector(".webhelp-site-disclaimer")) return;
+    var disclaimer = createHomeElement(doc, "div", "webhelp-callout webhelp-site-disclaimer");
+    disclaimer.id = "webhelpSiteDisclaimer";
+    disclaimer.setAttribute("role", "note");
+    disclaimer.setAttribute("aria-label", "站点与未收编拓展声明");
+
+    var lead = createHomeElement(doc, "strong", "", "站点与收录声明：");
+    disclaimer.appendChild(lead);
+    disclaimer.appendChild(doc.createTextNode("本站并非不全书网页版维护者“星尘”部署的网站（星尘维护的原站点："));
+
+    var originLink = createHomeElement(doc, "a", "", "https://5echm.kagangtuya.top");
+    originLink.href = "https://5echm.kagangtuya.top";
+    originLink.target = "_blank";
+    originLink.rel = "noopener noreferrer";
+    disclaimer.appendChild(originLink);
+
+    disclaimer.appendChild(doc.createTextNode("），站内包含未被 D&D Beyond 收编的拓展（详见"));
+
+    var aboutHref = topicUrl(unpartneredAboutPath()) || "topics/第三方/关于未收编拓展.htm";
+    var aboutLink = createHomeElement(doc, "a", "", "《关于未收编拓展》");
+    aboutLink.href = resolveAsset(aboutHref);
+    aboutLink.target = "content";
+    aboutLink.addEventListener("click", function (event) {
+      if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+      event.preventDefault();
+      navigate(aboutHref);
+    });
+    disclaimer.appendChild(aboutLink);
+
+    disclaimer.appendChild(doc.createTextNode("）。"));
+
+    var dmRule = createHomeElement(doc, "strong", "", "请与你的 DM 商量是否允许使用这些拓展，解释权归属你的 DM。");
+    disclaimer.appendChild(dmRule);
+
+    if (homeTitle && homeTitle.parentNode) {
+      homeTitle.parentNode.insertBefore(disclaimer, homeTitle.nextSibling);
+    } else {
+      doc.body.insertBefore(disclaimer, doc.body.firstChild);
+    }
+  }
+
   function enhanceHomePage(doc) {
     if (!doc.body || doc.body.getAttribute("data-webhelp-home-ready") === "true") return;
     var titleText = doc.title || "";
@@ -774,11 +1072,14 @@
     doc.body.setAttribute("data-webhelp-home-ready", "true");
     doc.body.classList.add("webhelp-home");
 
+    var homeTitle = null;
     Array.prototype.slice.call(doc.body.querySelectorAll("p")).some(function (paragraph) {
       if ((paragraph.textContent || "").indexOf("DND 五版不全书") === -1) return false;
       paragraph.classList.add("webhelp-home-title");
+      homeTitle = paragraph;
       return true;
     });
+    ensureHomeDisclaimer(doc, homeTitle);
 
     var actionParagraphs = [];
     Array.prototype.slice.call(doc.querySelectorAll("p")).forEach(function (paragraph) {
@@ -849,6 +1150,12 @@
     if (!doc || !doc.documentElement || !doc.body) return;
     applyDocumentPreferences(doc, "topic");
     enhanceHomePage(doc);
+    if (doc.documentElement.getAttribute("data-shell-topic-events") !== "true") {
+      doc.documentElement.setAttribute("data-shell-topic-events", "true");
+      doc.addEventListener("keydown", function (event) {
+        if (event.key === "Escape" && toastVisible) hideUnpartneredToast(true);
+      });
+    }
     if (doc.title) document.title = doc.title + " - " + projectTitle;
   }
 
@@ -858,6 +1165,7 @@
     var relativePath = currentTopicRelativePath();
     updatePageUrl(relativePath, nextHistoryMode);
     nextHistoryMode = "push";
+    evaluateUnpartneredCategory(relativePath);
     if (currentView === "contents") {
       try { syncNavigationSelection(navFrame.contentDocument); } catch (error) {}
     }
@@ -975,6 +1283,58 @@
         closeMoreMenu();
       }
     });
+    if (unpartneredToast) {
+      unpartneredToast.addEventListener("mouseenter", function () {
+        toastHovered = true;
+        pauseToastCountdown();
+      });
+      unpartneredToast.addEventListener("mouseleave", function () {
+        toastHovered = false;
+        toastFocused = Boolean(document.activeElement && unpartneredToast.contains(document.activeElement));
+        resumeToastCountdownIfIdle();
+      });
+      unpartneredToast.addEventListener("focusin", function () {
+        toastFocused = true;
+        pauseToastCountdown();
+      });
+      unpartneredToast.addEventListener("focusout", function (event) {
+        var nextTarget = event.relatedTarget;
+        if (nextTarget && unpartneredToast.contains(nextTarget)) {
+          toastFocused = true;
+          return;
+        }
+        window.setTimeout(function () {
+          if (!toastVisible || !unpartneredToast) return;
+          toastFocused = Boolean(document.activeElement && unpartneredToast.contains(document.activeElement));
+          toastHovered = Boolean(unpartneredToast.matches && unpartneredToast.matches(":hover"));
+          resumeToastCountdownIfIdle();
+        }, 0);
+      });
+    }
+    if (unpartneredToastClose) {
+      unpartneredToastClose.addEventListener("click", function () {
+        hideUnpartneredToast(true);
+      });
+    }
+    if (unpartneredToastOptOut) {
+      unpartneredToastOptOut.addEventListener("click", function () {
+        writeStorage("hideUnpartneredToast", "1");
+        hideUnpartneredToast(true);
+        announce("已设置不再自动显示未收编拓展提示");
+      });
+    }
+    if (unpartneredToastMore) {
+      var aboutTarget = topicUrl(unpartneredAboutPath());
+      if (aboutTarget) unpartneredToastMore.href = aboutTarget;
+      unpartneredToastMore.addEventListener("click", function (event) {
+        if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+        var target = topicUrl(unpartneredAboutPath());
+        if (!target) return;
+        event.preventDefault();
+        hideUnpartneredToast(true);
+        navigate(target);
+      });
+    }
     navFrame.addEventListener("load", enhanceNavDocument);
     contentFrame.addEventListener("load", onContentLoad);
     window.addEventListener("resize", function () {
@@ -1016,6 +1376,7 @@
         return;
       }
       if (event.key === "Escape") {
+        if (toastVisible) hideUnpartneredToast(true);
         if (body.classList.contains("drawer-open")) closeDrawer();
         closeMoreMenu();
         closeFontAdjustMenu();
